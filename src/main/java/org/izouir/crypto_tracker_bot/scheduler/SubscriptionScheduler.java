@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import static org.izouir.crypto_tracker_bot.util.constant.scheduler.SubscriptionSchedulerConstant.MIN_CRYPTO_CURRENCY_PRICE;
 import static org.izouir.crypto_tracker_bot.util.constant.scheduler.SubscriptionSchedulerConstant.NOTIFY_MESSAGE;
 
 @Component
@@ -35,6 +36,7 @@ public class SubscriptionScheduler {
         this.cryptoService = cryptoService;
         this.userRepository = userRepository;
 
+        loadCryptoState();
         loadSubscribersFromDatabase();
     }
 
@@ -55,7 +57,7 @@ public class SubscriptionScheduler {
         cryptoState = cryptoService.pullCryptoState();
     }
 
-    @Scheduled(cron = "30 * * * * *")
+    @Scheduled(cron = "* 1 * * * *")
     protected void notifySubscribers() {
         final List<CryptoCurrencyDto> actualCryptoState = cryptoService.pullCryptoState();
         for (final User subscriber : subscribers) {
@@ -66,9 +68,10 @@ public class SubscriptionScheduler {
                 final Double actualPrice = currency.price();
                 final double difference = (actualPrice - price) / price;
 
-                if (Math.abs(difference) >= subscriber.getSubscriberPercent()) {
+                if (actualPrice >= MIN_CRYPTO_CURRENCY_PRICE
+                        && Math.abs(difference) >= subscriber.getSubscriberPercent()) {
                     final String notifyMessage = String.format(NOTIFY_MESSAGE,
-                            currency.symbol(), currency.price(), difference);
+                            currency.symbol(), actualPrice, 100 * difference);
                     botMessageService.sendAsync(bot, subscriber.getChatId(), notifyMessage);
                 }
             }
