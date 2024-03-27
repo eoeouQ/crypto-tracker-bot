@@ -21,7 +21,7 @@ public class DispatcherBot extends TelegramLongPollingBot {
     }
 
     @Override
-    public void onUpdateReceived(Update update) {
+    public void onUpdateReceived(final Update update) {
         botUpdateService.executeUpdateAsync(this, update);
     }
 
