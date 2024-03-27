@@ -24,6 +24,7 @@ repositories {
 dependencies {
     implementation("org.telegram:telegrambots:6.9.7.1")
     implementation("org.springframework.boot:spring-boot-starter")
+    implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-log4j2")
     testImplementation("org.apache.logging.log4j:log4j-slf4j2-impl")
