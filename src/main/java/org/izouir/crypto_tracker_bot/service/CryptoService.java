@@ -32,8 +32,8 @@ public class CryptoService {
     }
 
     public void sendTopCryptoCurrencies(final TelegramLongPollingBot bot, final Long chatId) {
-        final Optional<User> user = userRepository.findById(chatId);
-        if (user.isPresent()) {
+        final Optional<User> optionalUser = userRepository.findById(chatId);
+        if (optionalUser.isPresent()) {
             final List<CryptoCurrencyDto> cryptoState = pullCryptoState();
             final String text = buildTopCryptoCurrenciesText(cryptoState);
             botMessageService.sendAsync(bot, chatId, text);
@@ -58,7 +58,7 @@ public class CryptoService {
         return cryptoStateStringBuilder.toString();
     }
 
-    private List<CryptoCurrencyDto> pullCryptoState() {
+    public List<CryptoCurrencyDto> pullCryptoState() {
         return webClient.get()
                 .retrieve()
                 .bodyToFlux(CryptoCurrencyDto.class)

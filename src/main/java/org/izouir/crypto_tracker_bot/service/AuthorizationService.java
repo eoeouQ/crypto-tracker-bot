@@ -9,6 +9,7 @@ import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 
 import java.util.Optional;
 
+import static org.izouir.crypto_tracker_bot.util.constant.service.AuthorizationServiceConstant.IS_SUBSCRIBER_DEFAULT_VALUE;
 import static org.izouir.crypto_tracker_bot.util.constant.service.AuthorizationServiceConstant.WELCOME_MESSAGE;
 
 @Service
@@ -28,7 +29,7 @@ public class AuthorizationService {
         if (user.isPresent()) {
             botMessageService.sendAsync(bot, chatId, String.format(WELCOME_MESSAGE, user.get().getUsername()));
         } else {
-            final User newUser = new User(chatId, username);
+            final User newUser = new User(chatId, username, IS_SUBSCRIBER_DEFAULT_VALUE);
             userRepository.save(newUser);
             botMessageService.sendAsync(bot, chatId, String.format(WELCOME_MESSAGE, username));
         }
