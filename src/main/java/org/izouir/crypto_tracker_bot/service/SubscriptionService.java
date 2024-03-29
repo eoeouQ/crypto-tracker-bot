@@ -14,7 +14,19 @@ import java.util.Optional;
 
 import static org.izouir.crypto_tracker_bot.util.constant.repository.UserRepositoryConstant.USER_WITH_CHAT_ID_WAS_NOT_FOUND_EXCEPTION_MESSAGE;
 import static org.izouir.crypto_tracker_bot.util.constant.service.AuthorizationServiceConstant.UNAUTHORIZED_ACCESS_MESSAGE;
-import static org.izouir.crypto_tracker_bot.util.constant.service.SubscriptionServiceConstant.*;
+import static org.izouir.crypto_tracker_bot.util.constant.service.SubscriptionServiceConstant.ALREADY_NOT_SUBSCRIBER_MESSAGE;
+import static org.izouir.crypto_tracker_bot.util.constant.service.SubscriptionServiceConstant.ALREADY_SUBSCRIBER_MESSAGE;
+import static org.izouir.crypto_tracker_bot.util.constant.service.SubscriptionServiceConstant.HIGH_SUBSCRIBER_PERCENT_CALLBACK_DATA;
+import static org.izouir.crypto_tracker_bot.util.constant.service.SubscriptionServiceConstant.HIGH_SUBSCRIBER_PERCENT_VALUE;
+import static org.izouir.crypto_tracker_bot.util.constant.service.SubscriptionServiceConstant.LOW_SUBSCRIBER_PERCENT_CALLBACK_DATA;
+import static org.izouir.crypto_tracker_bot.util.constant.service.SubscriptionServiceConstant.LOW_SUBSCRIBER_PERCENT_VALUE;
+import static org.izouir.crypto_tracker_bot.util.constant.service.SubscriptionServiceConstant.MAX_SUBSCRIBERS_POOL_SIZE;
+import static org.izouir.crypto_tracker_bot.util.constant.service.SubscriptionServiceConstant.MEDIUM_SUBSCRIBER_PERCENT_CALLBACK_DATA;
+import static org.izouir.crypto_tracker_bot.util.constant.service.SubscriptionServiceConstant.MEDIUM_SUBSCRIBER_PERCENT_VALUE;
+import static org.izouir.crypto_tracker_bot.util.constant.service.SubscriptionServiceConstant.SUBSCRIBERS_POOL_OVERLOAD_MESSAGE;
+import static org.izouir.crypto_tracker_bot.util.constant.service.SubscriptionServiceConstant.SUBSCRIBER_PERCENT_CHOICE_MESSAGE;
+import static org.izouir.crypto_tracker_bot.util.constant.service.SubscriptionServiceConstant.SUBSCRIBE_SUCCESS_MESSAGE;
+import static org.izouir.crypto_tracker_bot.util.constant.service.SubscriptionServiceConstant.UNSUBSCRIBE_SUCCESS_MESSAGE;
 
 @Service
 public class SubscriptionService {
@@ -76,7 +88,8 @@ public class SubscriptionService {
                     botMessageService.sendAsync(bot, chatId, SUBSCRIBERS_POOL_OVERLOAD_MESSAGE);
                 }
             } else {
-                botMessageService.sendAsync(bot, chatId, ALREADY_SUBSCRIBER_MESSAGE);
+                botMessageService.sendAsync(bot, chatId,
+                        String.format(ALREADY_SUBSCRIBER_MESSAGE, 100 * user.getSubscriberPercent()));
             }
         } else {
             botMessageService.sendAsync(bot, chatId, UNAUTHORIZED_ACCESS_MESSAGE);
@@ -101,12 +114,12 @@ public class SubscriptionService {
         }
     }
 
-    private void subscribe(final TelegramLongPollingBot bot, final User user, final Integer subscriberPercent) {
+    private void subscribe(final TelegramLongPollingBot bot, final User user, final Float subscriberPercent) {
         final Long chatId = user.getChatId();
 
         if (subscriptionScheduler.getSubscribersPoolSize() < MAX_SUBSCRIBERS_POOL_SIZE) {
             user.setIsSubscriber(true);
-            user.setSubscriberPercent((float) (1.0 * subscriberPercent / 100));
+            user.setSubscriberPercent(subscriberPercent);
             userRepository.save(user);
             subscriptionScheduler.addSubscriber(user);
             botMessageService.sendAsync(bot, chatId, SUBSCRIBE_SUCCESS_MESSAGE);
