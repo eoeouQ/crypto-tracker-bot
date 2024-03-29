@@ -13,7 +13,11 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import static org.izouir.crypto_tracker_bot.util.constant.service.bot.BotUpdateServiceConstant.*;
+import static org.izouir.crypto_tracker_bot.util.constant.service.bot.BotUpdateServiceConstant.COMMAND_START;
+import static org.izouir.crypto_tracker_bot.util.constant.service.bot.BotUpdateServiceConstant.COMMAND_SUBSCRIBE;
+import static org.izouir.crypto_tracker_bot.util.constant.service.bot.BotUpdateServiceConstant.COMMAND_TOP;
+import static org.izouir.crypto_tracker_bot.util.constant.service.bot.BotUpdateServiceConstant.COMMAND_UNKNOWN_MESSAGE;
+import static org.izouir.crypto_tracker_bot.util.constant.service.bot.BotUpdateServiceConstant.COMMAND_UNSUBSCRIBE;
 
 @Service
 public class BotUpdateService {
