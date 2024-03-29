@@ -1,6 +1,5 @@
 package org.izouir.crypto_tracker_bot.scheduler;
 
-import org.izouir.crypto_tracker_bot.dto.CryptoCurrencyDto;
 import org.izouir.crypto_tracker_bot.entity.User;
 import org.izouir.crypto_tracker_bot.repository.UserRepository;
 import org.izouir.crypto_tracker_bot.service.CryptoService;
@@ -12,10 +11,13 @@ import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
-import static org.izouir.crypto_tracker_bot.util.constant.scheduler.SubscriptionSchedulerConstant.MIN_CRYPTO_CURRENCY_PRICE;
-import static org.izouir.crypto_tracker_bot.util.constant.scheduler.SubscriptionSchedulerConstant.NOTIFY_MESSAGE;
+import static org.izouir.crypto_tracker_bot.util.constant.scheduler.SubscriptionSchedulerConstant.NEGATIVE_NOTIFY_MESSAGE;
+import static org.izouir.crypto_tracker_bot.util.constant.scheduler.SubscriptionSchedulerConstant.POSITIVE_NOTIFY_MESSAGE;
+import static org.izouir.crypto_tracker_bot.util.constant.service.CryptoServiceConstant.INVALID_CRYPTO_CURRENCY_PRICE;
+import static org.izouir.crypto_tracker_bot.util.constant.service.SubscriptionServiceConstant.MAX_SUBSCRIBERS_POOL_SIZE;
 
 @Component
 public class SubscriptionScheduler {
@@ -23,8 +25,8 @@ public class SubscriptionScheduler {
     private final BotMessageService botMessageService;
     private final CryptoService cryptoService;
     private final UserRepository userRepository;
-    private final List<User> subscribers = new ArrayList<>();
-    private List<CryptoCurrencyDto> cryptoState;
+    private final List<User> subscribers = new ArrayList<>(MAX_SUBSCRIBERS_POOL_SIZE);
+    private Map<String, Double> lastCryptoState;
 
     @Autowired
     public SubscriptionScheduler(final TelegramLongPollingBot bot,
@@ -36,7 +38,7 @@ public class SubscriptionScheduler {
         this.cryptoService = cryptoService;
         this.userRepository = userRepository;
 
-        loadCryptoState();
+        lastCryptoState = cryptoService.pullCryptoState();
         loadSubscribersFromDatabase();
     }
 
@@ -52,30 +54,36 @@ public class SubscriptionScheduler {
         return subscribers.size();
     }
 
-    @Scheduled(cron = "* * 1 * * *")
-    protected void loadCryptoState() {
-        cryptoState = cryptoService.pullCryptoState();
-    }
-
-    @Scheduled(cron = "* 1 * * * *")
+    @Scheduled(cron = "0 */20 * * * *")
     protected void notifySubscribers() {
-        final List<CryptoCurrencyDto> actualCryptoState = cryptoService.pullCryptoState();
+        final Map<String, Double> actualCryptoState = cryptoService.pullCryptoState();
+
         for (final User subscriber : subscribers) {
-            for (int i = 0; i < cryptoState.size(); i++) {
-                final CryptoCurrencyDto currency = actualCryptoState.get(i);
+            for (final Map.Entry<String, Double> actualCryptoCurrency : actualCryptoState.entrySet()) {
+                final Double lastPrice = lastCryptoState.getOrDefault(actualCryptoCurrency.getKey(),
+                        INVALID_CRYPTO_CURRENCY_PRICE);
+                if (Objects.equals(lastPrice, INVALID_CRYPTO_CURRENCY_PRICE)) {
+                    continue;
+                }
+                final Double actualPrice = actualCryptoCurrency.getValue();
+                final double difference = (actualPrice - lastPrice) / lastPrice;
 
-                final Double price = cryptoState.get(i).price();
-                final Double actualPrice = currency.price();
-                final double difference = (actualPrice - price) / price;
+                if (Math.abs(difference) >= subscriber.getSubscriberPercent()) {
+                    final String messageFormat;
+                    if (difference > 0) {
+                        messageFormat = POSITIVE_NOTIFY_MESSAGE;
+                    } else {
+                        messageFormat = NEGATIVE_NOTIFY_MESSAGE;
+                    }
 
-                if (actualPrice >= MIN_CRYPTO_CURRENCY_PRICE
-                        && Math.abs(difference) >= subscriber.getSubscriberPercent()) {
-                    final String notifyMessage = String.format(NOTIFY_MESSAGE,
-                            currency.symbol(), actualPrice, 100 * difference);
+                    final String notifyMessage = String.format(messageFormat,
+                            actualCryptoCurrency.getKey(), lastPrice, actualPrice, Math.abs(100 * difference));
                     botMessageService.sendAsync(bot, subscriber.getChatId(), notifyMessage);
                 }
             }
         }
+
+        lastCryptoState = actualCryptoState;
     }
 
     private void loadSubscribersFromDatabase() {
